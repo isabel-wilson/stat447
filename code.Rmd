@@ -1,0 +1,99 @@
+---
+title: "Final Project"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-04-05"
+---
+```{r}
+suppressPackageStartupMessages(require(ggplot2))
+suppressPackageStartupMessages(require(dplyr))
+suppressPackageStartupMessages(require(rstan))
+
+```
+
+
+```{r}
+
+# Load data
+
+setwd("C:/0.HARD_DRIVE/stat_proj")
+df <- read.csv("Component1_Test.csv")
+
+```
+
+
+
+```{r}
+
+# Describe the data
+
+plot(df$Time, df$Weight, xlab = "Time Stamp", ylab = "Predictor Weight")
+
+N <- length(df$Time)
+time <- df$Time
+weight <- df$Weight
+stan_data <- list(N=N, x=time, y=weight)
+
+print(stan_data)
+
+```
+
+
+
+```{stan, output.var = "hrf"}
+
+data { 
+  int<lower=1> N; // sample size
+  vector[N] time; 
+  vector[N] weight; 
+}
+
+parameters { 
+  real <lower=0> alpha;
+  real <lower=0> beta;
+}
+
+
+model {
+
+  alpha ~ exponential(1); 
+  beta ~ exponential(1);
+  
+  for (t in 1:N) {
+    weight[t] ~ gamma(alpha, beta * time[t]);
+  }
+}
+
+
+```
+
+
+
+```{r message=FALSE, warning=FALSE, results=FALSE, dependson=knitr::dep_prev()}
+
+fit = sampling(
+  hrf,         
+  data = list(time=time, weight=weight, N=N),
+  chains = 1,
+  iter = 2000
+)
+
+```
+
+
+
+```{r}
+
+# checking: 
+fit
+samples = extract(fit)
+mean(samples$alpha)
+
+# histogram: 
+hist(samples$beta, main = "Histogram of slope parameter", xlab = "slope")
+
+
+```
+
+
